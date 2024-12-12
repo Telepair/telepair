@@ -1,0 +1,26 @@
+run:
+  go: "1.23"
+  concurrency: 4
+  timeout: 10m
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - goimports
+    - govet
+    - errcheck
+    - gosimple
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gocyclo
+    - gosec
+    - misspell
+    - whitespace
+    - revive
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15

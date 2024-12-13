@@ -75,7 +75,7 @@ A WebRTC-based remote management platform supporting remote desktop, terminal ac
 
 ## Quick Start
 
-More details are available [here](docs/development.md).
+More docs [Development Guide](docs/development.md) and [CLI Tools](docs/tools.md).
 
 ## TODO
 

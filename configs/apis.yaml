@@ -1,0 +1,35 @@
+- name: "eip"
+  api:
+    method: GET
+    urls:
+      - https://ifconfig.co/ip
+      - https://ifconfig.me/ip
+      - https://api.ipify.org
+      - https://checkip.amazonaws.com
+    headers:
+      Content-Type: application/json
+    config:
+      timeout: 10s
+- name: "geo"
+  api:
+    method: GET
+    urls:
+      - https://ifconfig.co/json
+      - https://ipapi.co/json/
+    headers:
+      Content-Type: application/json
+    config:
+      timeout: 10s
+- name: "weather"
+  api:
+    method: GET
+    url: "https://wttr.in/{{ city }}?lang={{ lang }}&format=%l:+%C+%c+%t+%w+%T\n"
+    config:
+      timeout: 10s
+  template_field:
+    url: true
+  vars:
+    - name: city
+      default: "beijing"
+    - name: lang
+      default: "en"

@@ -30,20 +30,14 @@ The project uses a distributed architecture with the following components:
 
 ```bash
 /
-├── cmd/                     # Executable entry points
-│   ├── server.go            # Management server
-│   ├── agent.go             # Agent program
-│   ├── tools.go             # Tools
-├── web/                     # Web frontend
-│   ├── src/
-│   ├── public/
-│   └── package.json
-├── internal/               # Internal shared code
-│   ├── auth/               # Authentication
-│   ├── models/             # Data models
-│   ├── proto/              # Communication protocol definitions
-│   └── common/             # Common utilities
-├── pkg/                    # Exportable packages
+├── api/                    # REST API definitions
+│   └── openapi/
+├── cmd/                    # Executable entry points
+│   ├── server.go           # Management server
+│   ├── agent.go            # Agent program
+│   ├── tools.go            # Tools
+├── configs/                # Configuration files
+├── core/                   # Exportable packages
 │   ├── webrtc/             # WebRTC related
 │   │   ├── connection/
 │   │   └── signaling/
@@ -57,16 +51,32 @@ The project uses a distributed architecture with the following components:
 │   └── agent/              # Agent related
 │       ├── registry/
 │       └── session/
-├── api/                    # REST API definitions
-│   └── openapi/
-├── configs/                # Configuration files
 ├── deployments/            # Deployment related
 │   ├── docker/
 │   └── kubernetes/
 ├── docs/                   # Documentation
-├── scripts/                # Build scripts
-├── Makefile                # Makefile
-└── main.go                 # Main entry point
+├── internal/               # Internal shared code
+│   ├── auth/               # Authentication
+│   ├── common/             # Common utilities
+│   ├── config/             # Configuration
+│   ├── middleware/         # Middleware
+│   ├── models/             # Data models
+│   ├── proto/              # Communication protocol definitions
+│   └── service/            # Service definitions
+├── pkg/
+│   ├── cache/
+│   ├── httpclient/
+│   ├── log/
+│   ├── metrics/
+│   ├── security/
+│   ├── utils/
+│   └── version/
+├── web/                    # Web frontend
+│   ├── src/
+│   ├── public/
+│   └── package.json
+│── main.go                 # Main entry point
+└── Makefile                # Makefile
 ```
 
 ## Tech Stack

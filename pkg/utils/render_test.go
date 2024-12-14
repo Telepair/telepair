@@ -10,8 +10,7 @@ import (
 func ExampleSimpleRender() {
 	jsonStr := `{"name": "{{ name }}", "age": {{ age }} }`
 	vars := map[string]string{"name": "John", "age": "20"}
-	defaults := map[string]string{"name": "Default", "age": "18"}
-	got, err := SimpleRender(jsonStr, vars, defaults)
+	got, err := SimpleRender(jsonStr, vars)
 	fmt.Println(got, err)
 	// Output:
 	// {"name": "John", "age": 20 } <nil>
@@ -19,12 +18,11 @@ func ExampleSimpleRender() {
 
 func TestRender(t *testing.T) {
 	tests := []struct {
-		name     string
-		tmpl     string
-		vars     map[string]string
-		defaults map[string]string
-		want     string
-		wantErr  string
+		name    string
+		tmpl    string
+		vars    map[string]string
+		want    string
+		wantErr string
 	}{
 		{
 			name: "basic substitution",
@@ -40,13 +38,6 @@ func TestRender(t *testing.T) {
 				"name":     "World",
 			},
 			want: "Hello World!",
-		},
-		{
-			name:     "using defaults",
-			tmpl:     "Hello {{ name }}!",
-			vars:     map[string]string{},
-			defaults: map[string]string{"name": "Default"},
-			want:     "Hello Default!",
 		},
 		{
 			name:    "missing variable",
@@ -72,7 +63,7 @@ func TestRender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SimpleRender(tt.tmpl, tt.vars, tt.defaults)
+			got, err := SimpleRender(tt.tmpl, tt.vars)
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			} else {
@@ -85,12 +76,11 @@ func TestRender(t *testing.T) {
 
 func TestRender_JSON(t *testing.T) {
 	tests := []struct {
-		name     string
-		tmpl     string
-		vars     map[string]string
-		defaults map[string]string
-		want     string
-		wantErr  string
+		name    string
+		tmpl    string
+		vars    map[string]string
+		want    string
+		wantErr string
 	}{
 		{
 			name: "basic json template",
@@ -100,16 +90,6 @@ func TestRender_JSON(t *testing.T) {
 				"age":  "20",
 			},
 			want: `{"name": "John", "age": 20 }`,
-		},
-		{
-			name: "json with defaults",
-			tmpl: `{"name": "{{ name }}", "age": {{ age }} }`,
-			vars: map[string]string{},
-			defaults: map[string]string{
-				"name": "Default",
-				"age":  "18",
-			},
-			want: `{"name": "Default", "age": 18 }`,
 		},
 		{
 			name: "missing json values",
@@ -133,7 +113,7 @@ func TestRender_JSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := SimpleRender(tt.tmpl, tt.vars, tt.defaults)
+			got, err := SimpleRender(tt.tmpl, tt.vars)
 			if tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			} else {

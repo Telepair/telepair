@@ -77,6 +77,24 @@ A WebRTC-based remote management platform supporting remote desktop, terminal ac
 
 More docs [Development Guide](docs/development.md) and [CLI Tools](docs/tools.md).
 
+### Build from source
+
+```bash
+git clone https://github.com/telepair/telepair.git
+cd telepair
+make build
+```
+
+### Run from binary
+
+```bash
+
+# Run tools
+./bin/telepair tools --help
+./bin/telepair tools api-template --help
+./bin/telepair tools api-template weather -v '{"city": "beijing", "lang": "zh"}'
+```
+
 ## TODO
 
 - [ ] Implement user features for remote desktop and terminal access

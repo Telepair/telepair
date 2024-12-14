@@ -115,3 +115,11 @@ func (m *memory) Keys(_ context.Context) ([]string, error) {
 	}
 	return keys, nil
 }
+
+func (m *memory) Clear(_ context.Context) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	m.data = make(map[string]Item, 256)
+	return nil
+}

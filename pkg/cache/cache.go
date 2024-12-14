@@ -24,6 +24,7 @@ type Cache interface {
 	SetWithTTL(ctx context.Context, key string, value any, ttl time.Duration) error
 	Delete(ctx context.Context, key string) error
 	Keys(ctx context.Context) ([]string, error)
+	Clear(ctx context.Context) error
 }
 
 var ErrNotFound = errors.New("not found")

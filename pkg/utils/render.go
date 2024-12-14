@@ -10,7 +10,7 @@ import (
 var VariablePattern = regexp.MustCompile(`{{\s*([a-zA-Z0-9_-]+)\s*}}`)
 
 // SimpleRender renders the template with the given variables and defaults
-func SimpleRender(tmpl string, vars map[string]string, defaults map[string]string) (string, error) {
+func SimpleRender(tmpl string, vars map[string]string) (string, error) {
 	result := tmpl
 	notFound := []string{}
 	result = VariablePattern.ReplaceAllStringFunc(result, func(match string) string {
@@ -18,10 +18,8 @@ func SimpleRender(tmpl string, vars map[string]string, defaults map[string]strin
 		if value, exists := vars[varName]; exists {
 			return value
 		}
-		if _, exists := defaults[varName]; !exists {
-			notFound = append(notFound, varName)
-		}
-		return defaults[varName]
+		notFound = append(notFound, varName)
+		return ""
 	})
 	if len(notFound) > 0 {
 		slices.Sort(notFound)

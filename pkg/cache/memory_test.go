@@ -118,4 +118,10 @@ func TestMemory(t *testing.T) {
 	v, err = cache.Get(context.Background(), key)
 	assert.ErrorIs(t, err, ErrNotFound)
 	assert.Nil(t, v)
+
+	err = cache.Clear(context.Background())
+	assert.NoError(t, err)
+	keys, err = cache.Keys(context.Background())
+	assert.NoError(t, err)
+	assert.Empty(t, keys)
 }

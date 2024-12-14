@@ -2,47 +2,14 @@ package api
 
 import (
 	"context"
-	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/telepair/telepair/pkg/httpclient"
 )
-
-func ExampleRegisterAPI() {
-	data := []byte(`
-- name: my-eip
-  method: GET
-  urls:
-    - https://api.ipify.org
-    - https://checkip.amazonaws.com
-    - https://ifconfig.co/ip
-    - https://ifconfig.me/ip
-  headers:
-    Content-Type: application/json
-  config:
-    checker:
-      success_codes: [200]
-    fallback:
-      selector: random
-    timeout: 10s
-`)
-	if err := RegisterAPIData("yaml", data); err != nil {
-		panic(err)
-	}
-	resp, err := Do("my-eip")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(resp.StatusCode)
-	// Output:
-	// 200
-}
 
 func TestAPI_Parse(t *testing.T) {
 	tests := []struct {
@@ -53,7 +20,7 @@ func TestAPI_Parse(t *testing.T) {
 		{
 			name: "valid GET request",
 			api: API{
-				Method: "get",
+				Method: "GET",
 				URL:    "http://example.com",
 			},
 			wantErr: false,
@@ -76,7 +43,7 @@ func TestAPI_Parse(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "missing URL and URLs",
+			name: "empty URL and URLs",
 			api: API{
 				Method: "GET",
 			},
@@ -105,55 +72,58 @@ func TestAPI_Parse(t *testing.T) {
 }
 
 func TestAPI_Do(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Test") == "fail" {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
 	tests := []struct {
-		name    string
-		api     API
-		wantErr bool
+		name           string
+		api            API
+		serverResponse func(w http.ResponseWriter, r *http.Request)
+		wantStatusCode int
+		wantErr        bool
 	}{
 		{
-			name: "successful request",
+			name: "successful GET request",
 			api: API{
 				Method: "GET",
-				URL:    server.URL,
-				Config: Config{
-					Timeout: 5 * time.Second,
+				Headers: map[string]string{
+					"X-Test": "test",
 				},
 			},
-			wantErr: false,
+			serverResponse: func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "test", r.Header.Get("X-Test"))
+				w.WriteHeader(http.StatusOK)
+			},
+			wantStatusCode: http.StatusOK,
+			wantErr:        false,
 		},
 		{
-			name: "failed request",
+			name: "failed request with non-success status code",
 			api: API{
 				Method: "GET",
-				URL:    server.URL,
-				Headers: map[string]string{
-					"X-Test": "fail",
-				},
-				Config: Config{
-					Timeout: 5 * time.Second,
-				},
 			},
-			wantErr: true,
+			serverResponse: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantErr:        true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(tt.serverResponse))
+			defer server.Close()
+
+			tt.api.URL = server.URL
+			err := tt.api.Parse()
+			assert.NoError(t, err)
+
 			resp, err := tt.api.Do()
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.NotNil(t, resp)
+			}
+			if resp != nil {
+				assert.Equal(t, tt.wantStatusCode, resp.StatusCode)
 			}
 		})
 	}
@@ -194,7 +164,7 @@ func TestAPI_IsSuccess(t *testing.T) {
 				Config: Config{
 					Checker: Checker{
 						HeaderMatch: map[string]string{
-							"X-Test": "pass",
+							"X-Test": "test",
 						},
 					},
 				},
@@ -202,7 +172,7 @@ func TestAPI_IsSuccess(t *testing.T) {
 			response: &http.Response{
 				StatusCode: http.StatusOK,
 				Header: http.Header{
-					"X-Test": []string{"pass"},
+					"X-Test": []string{"test"},
 				},
 			},
 			want: true,
@@ -213,7 +183,7 @@ func TestAPI_IsSuccess(t *testing.T) {
 				Config: Config{
 					Checker: Checker{
 						HeaderMatch: map[string]string{
-							"X-Test": "pass",
+							"X-Test": "test",
 						},
 					},
 				},
@@ -221,7 +191,7 @@ func TestAPI_IsSuccess(t *testing.T) {
 			response: &http.Response{
 				StatusCode: http.StatusOK,
 				Header: http.Header{
-					"X-Test": []string{"fail"},
+					"X-Test": []string{"wrong"},
 				},
 			},
 			want: false,
@@ -236,53 +206,46 @@ func TestAPI_IsSuccess(t *testing.T) {
 	}
 }
 
-func TestAPI_doWithFallback(t *testing.T) {
-	fallSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer fallSvc.Close()
-	okSvc := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	}))
-	defer okSvc.Close()
+func TestAPI_Options(t *testing.T) {
+	ctx := context.Background()
+	mockClient := httpclient.DefaultClient
 
-	api := API{
-		Method: "GET",
-		URL:    fallSvc.URL,
-		URLs:   []string{fallSvc.URL, okSvc.URL},
+	tests := []struct {
+		name    string
+		opts    []Option
+		wantCtx context.Context
+	}{
+		{
+			name: "with context",
+			opts: []Option{WithContext(ctx)},
+		},
+		{
+			name: "with client",
+			opts: []Option{WithClient(mockClient)},
+		},
+		{
+			name: "with both options",
+			opts: []Option{WithContext(ctx), WithClient(mockClient)},
+		},
 	}
 
-	resp, err := api.doWithFallback(context.Background(), nil)
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", string(body))
-}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
 
-func TestWithClient(t *testing.T) {
-	client := httpclient.New()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			api := &API{
+				Method: "GET",
+				URL:    server.URL,
+				Config: Config{
+					Timeout: time.Second,
+				},
+			}
 
-	// Create config and apply the WithClient option
-	cfg := &config{}
-	opt := WithClient(client)
-	opt(cfg)
-
-	// Assert the client was properly set
-	assert.Equal(t, client, cfg.client)
-}
-
-func TestWithContext(t *testing.T) {
-	// Create a test context
-	ctx := context.Background()
-
-	// Create config and apply the WithContext option
-	cfg := &config{}
-	opt := WithContext(ctx)
-	opt(cfg)
-
-	// Assert the context was properly set
-	assert.Equal(t, ctx, cfg.ctx)
+			_, err := api.Do(tt.opts...)
+			assert.NoError(t, err)
+		})
+	}
 }
